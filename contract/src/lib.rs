@@ -1,8 +1,13 @@
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::LookupMap;
-use near_sdk::env::{predecessor_account_id, random_seed};
-use near_sdk::serde_json::json;
-use near_sdk::{env, log, near_bindgen, require, AccountId, Gas, Promise, PromiseError};
+use near_sdk::{
+    borsh::{self, BorshDeserialize, BorshSerialize},
+    collections::LookupMap,
+    env::{self, log},
+    env::{predecessor_account_id, random_seed},
+    log, near_bindgen, require,
+    serde::{Deserialize, Serialize},
+    serde_json::json,
+    AccountId, Gas, Promise, PromiseError, ONE_NEAR,
+};
 
 pub mod external;
 pub use crate::external::*;
@@ -10,6 +15,14 @@ pub use crate::external::*;
 pub const TGAS: u64 = 1_000_000_000_000;
 pub const NO_DEPOSIT: u128 = 0;
 pub const NO_ARGS: Vec<u8> = vec![];
+
+#[derive(Serialize, Deserialize)]
+#[serde(crate = "near_sdk::serde")]
+pub struct PostedMessage {
+    pub premium: bool,
+    pub sender: AccountId,
+    pub text: String,
+}
 
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize)]
@@ -27,7 +40,8 @@ impl Default for Contract {
 
 #[near_bindgen]
 impl Contract {
-    // Public - query external greeting
+    // ========================================
+    // Hello NEAR contract evaluation
     pub fn evaluate_hello_near(&mut self, contract_account_id: AccountId) -> Promise {
         require!(
             self.evaluating_sub_account(&contract_account_id),
@@ -60,7 +74,7 @@ impl Contract {
                     .evaluate_hello_near_callback(random_string, contract_account_id.clone()),
             )
     }
-
+    // Hello Near Evaluation Callback
     #[private]
     pub fn evaluate_hello_near_callback(
         &mut self,
@@ -80,10 +94,79 @@ impl Contract {
         }
     }
 
-    pub fn account_participation(&self, account_name: &AccountId) -> bool {
-        self.records.get(&account_name).unwrap_or(false)
+    // ========================================
+    // Guest Book Contract Evaluation
+    pub fn evaluate_guestbook(&mut self, contract_account_id: AccountId) -> Promise {
+        require!(
+            self.evaluating_sub_account(&contract_account_id),
+            format!(
+                "Please deploy contract as sub account. Such as guestbook.{}",
+                env::predecessor_account_id()
+            ),
+        );
+
+        let args = json!({ "text": "Hello from Evaluator" })
+            .to_string()
+            .into_bytes();
+
+        Promise::new(contract_account_id.clone())
+            .function_call(
+                "add_message".to_string(),
+                args.clone(),
+                NO_DEPOSIT,
+                Gas(15 * TGAS),
+            )
+            // Premium Message (attached deposit)
+            .function_call(
+                "add_message".to_string(),
+                args,
+                ONE_NEAR / 10,
+                Gas(15 * TGAS),
+            )
+            .function_call(
+                "get_messages".to_string(),
+                // TODO: Using NO_ARGS here causes a "Failed to deserialize the input: EOF while parsing a value at line 1 column 0"
+                json!({}).to_string().into_bytes(),
+                NO_DEPOSIT,
+                Gas(5 * TGAS),
+            )
+            .then(
+                Self::ext(env::current_account_id())
+                    .with_static_gas(Gas(5 * TGAS))
+                    .evaluate_guestbook_callback(contract_account_id.clone()),
+            )
     }
 
+    // Guest Book Evaluation Callback
+    #[private]
+    pub fn evaluate_guestbook_callback(
+        &mut self,
+        #[callback_result] call_result: Result<Vec<PostedMessage>, PromiseError>,
+        contract_name: AccountId,
+    ) {
+        // The callback only has access to the last action's result
+        match call_result {
+            Ok(messages_vec) => {
+                require!(
+                    messages_vec.len() >= 2,
+                    "There should be at least 2 messages in the guestbook"
+                );
+
+                let last_message = &messages_vec[messages_vec.len() - 1];
+                require!(
+                    last_message.text == "Hello from Evaluator",
+                    "The last message should be from the evaluator"
+                );
+                require!(last_message.premium, "The last message should be premium");
+
+                log!("It works! The last message is {}", last_message.text);
+            }
+            // log Error message
+            Err(err) => log!("{:#?}", err),
+        }
+    }
+
+    // ========================================
     // Account ID that's being checked is Sub-Account of the caller
     #[private]
     pub fn evaluating_sub_account(&self, account_id: &AccountId) -> bool {
