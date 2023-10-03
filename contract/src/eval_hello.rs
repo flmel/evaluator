@@ -1,12 +1,9 @@
 use near_sdk::{
-    env,
-    log, near_bindgen, require,
-    serde_json::json,
-    AccountId, Gas, Promise, PromiseError,
+    env, log, near_bindgen, require, serde_json::json, AccountId, Gas, Promise, PromiseError,
 };
 
-use crate::{Contract, ContractExt};
 pub use crate::constants::{NO_ARGS, NO_DEPOSIT, TGAS};
+use crate::{Contract, ContractExt};
 
 #[near_bindgen]
 impl Contract {
@@ -19,7 +16,6 @@ impl Contract {
             ),
         );
 
-        // First let's get a random string from random seed
         let random_string: String = self.random_string();
 
         let args = json!({ "greeting": random_string })
@@ -37,26 +33,26 @@ impl Contract {
             .then(
                 Self::ext(env::current_account_id())
                     .with_static_gas(Gas(5 * TGAS))
-                    .evaluate_hello_near_callback(random_string, contract_account_id.clone()),
+                    .evaluate_hello_near_callback(random_string),
             )
     }
     // Hello Near Evaluation Callback
     #[private]
     pub fn evaluate_hello_near_callback(
         &mut self,
-        #[callback_result] last_result: Result<String, PromiseError>,
+        #[callback_result] call_result: Result<String, PromiseError>,
         random_string: String,
-        contract_name: AccountId,
-    ) -> bool {
-        // The callback only has access to the last action's result
-        if let Ok(result) = last_result {
-            log!(format!("The last result is {result}"));
-            let output = result == random_string;
-            self.records.insert(&contract_name, &output);
-            output
-        } else {
-            log!("The batch call failed and all calls got reverted");
-            false
+    ) {
+        match call_result {
+            Ok(greeting) => {
+                require!(
+                    greeting == random_string,
+                    format!("Last message should be {}", random_string)
+                );
+                log!("Hello Near Evaluation Success! Greeting is : {}", greeting);
+            }
+            // Log Error message
+            Err(err) => log!("{:#?}", err),
         }
     }
 }

@@ -28,7 +28,10 @@ impl Contract {
         );
 
         let random_string = self.random_string();
-        let args = json!({ "text": random_string }).to_string().into_bytes();
+        let args: Vec<u8> = json!({ "text": self.random_string() })
+            .to_string()
+            .into_bytes();
+        let args_call_2: Vec<u8> = json!({ "text": random_string }).to_string().into_bytes();
 
         Promise::new(contract_account_id.clone())
             .function_call(
@@ -40,7 +43,7 @@ impl Contract {
             // Premium Message (attached deposit)
             .function_call(
                 "add_message".to_string(),
-                args,
+                args_call_2,
                 ONE_NEAR / 10,
                 Gas(15 * TGAS),
             )
@@ -54,7 +57,7 @@ impl Contract {
             .then(
                 Self::ext(env::current_account_id())
                     .with_static_gas(Gas(5 * TGAS))
-                    .evaluate_guestbook_callback(),
+                    .evaluate_guestbook_callback(random_string),
             )
     }
 
@@ -62,8 +65,8 @@ impl Contract {
     pub fn evaluate_guestbook_callback(
         &mut self,
         #[callback_result] call_result: Result<Vec<PostedMessage>, PromiseError>,
+        random_string: String,
     ) {
-        // The callback only has access to the last action's result
         match call_result {
             Ok(messages_vec) => {
                 require!(
@@ -73,14 +76,17 @@ impl Contract {
 
                 let last_message = &messages_vec[messages_vec.len() - 1];
                 require!(
-                    last_message.text == "Hello from Evaluator",
-                    "The last message should be from the evaluator"
+                    last_message.text == random_string,
+                    format!("The last message should be {}", random_string)
                 );
                 require!(last_message.premium, "The last message should be premium");
 
-                log!("It works! The last message is {}", last_message.text);
+                log!(
+                    "Guestbook evaluation success! Last message is:  {}",
+                    last_message.text
+                );
             }
-            // log Error message
+            // Log Error message
             Err(err) => log!("{:#?}", err),
         }
     }
