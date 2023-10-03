@@ -1,5 +1,5 @@
 use near_sdk::{
-    env, log, near_bindgen, require, serde_json::json, AccountId, Gas, Promise, PromiseError,
+    env, near_bindgen, require, serde_json::json, AccountId, Gas, Promise, PromiseError,
 };
 
 pub use crate::constants::{NO_ARGS, NO_DEPOSIT, TGAS};
@@ -8,13 +8,7 @@ use crate::{Contract, ContractExt};
 #[near_bindgen]
 impl Contract {
     pub fn evaluate_hello_near(&mut self, contract_account_id: AccountId) -> Promise {
-        require!(
-            self.evaluating_sub_account(&contract_account_id),
-            format!(
-                "Please deploy contract as sub account. Such as hello_near.{}",
-                env::predecessor_account_id()
-            ),
-        );
+        self.assert_valid_account(&contract_account_id);
 
         let random_string: String = self.random_string(1);
 
@@ -33,7 +27,7 @@ impl Contract {
             .then(
                 Self::ext(env::current_account_id())
                     .with_static_gas(Gas(5 * TGAS))
-                    .evaluate_hello_near_callback(random_string),
+                    .evaluate_hello_near_callback(env::predecessor_account_id(), random_string),
             )
     }
     // Hello Near Evaluation Callback
@@ -41,18 +35,25 @@ impl Contract {
     pub fn evaluate_hello_near_callback(
         &mut self,
         #[callback_result] call_result: Result<String, PromiseError>,
+        student_id: AccountId,
         random_string: String,
     ) {
         match call_result {
             Ok(greeting) => {
                 require!(
                     greeting == random_string,
-                    format!("Last message should be {}", random_string)
+                    format!(
+                        "Expected greeting to be {}, not {}",
+                        random_string, greeting
+                    )
                 );
-                log!("Hello Near Evaluation Success! Greeting is : {}", greeting);
+                let mut evaluations = self.evaluations.get(&student_id).unwrap();
+                evaluations[0] = true;
+                self.evaluations.insert(&student_id, &evaluations);
             }
-            // Log Error message
-            Err(err) => log!("{:#?}", err),
+            Err(err) => {
+                require!(false, format!("{:#?}", err));
+            }
         }
     }
 }

@@ -5,6 +5,9 @@ use near_sdk::{
     near_bindgen, require, AccountId,
 };
 
+pub use crate::constants::{REGISTRATION_COST, BASIC_EVAL_NUMBER};
+
+
 pub mod external;
 pub use crate::external::*;
 mod constants;
@@ -14,30 +17,62 @@ mod eval_hello;
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct Contract {
-    records: LookupMap<AccountId, bool>,
+    evaluations: LookupMap<AccountId, Vec<bool>>,
 }
 
 impl Default for Contract {
     fn default() -> Self {
         Self {
-            records: LookupMap::new(b"r".to_vec()),
+            evaluations: LookupMap::new(b"r".to_vec()),
         }
     }
 }
 
 #[near_bindgen]
 impl Contract {
-    // Account ID that's being checked is Sub-Account of the caller
-    #[private]
-    pub fn evaluating_sub_account(&self, account_id: &AccountId) -> bool {
+
+    #[payable]
+    pub fn register(&mut self) {
         require!(
-            account_id != &env::predecessor_account_id(),
-            "You cannot evaluate top level account"
+            env::attached_deposit() >= REGISTRATION_COST,
+            format!("Please attach at least {} NEAR to register", REGISTRATION_COST) 
         );
 
-        account_id
-            .as_str()
-            .contains(predecessor_account_id().as_str())
+        let account_id = env::predecessor_account_id();
+
+        require!(
+            !self.evaluations.contains_key(&account_id),
+            "You are already registered"
+        );
+
+        let evaluations = vec![false; BASIC_EVAL_NUMBER];
+
+        self.evaluations.insert(&account_id, &evaluations);
+    }
+
+    pub fn get_evaluations(&self, account_id: AccountId) -> Vec<bool> {
+        self.evaluations.get(&account_id).unwrap()
+    }
+
+    pub fn passed_all_exams(&self, account_id: AccountId) -> bool {
+        let evaluations = self.evaluations.get(&account_id).unwrap();
+        evaluations.iter().all(|&x| x)
+    }
+
+    fn assert_valid_account(&self, sub_account_id: &AccountId) {
+        let parent_id: AccountId = sub_account_id.to_string().split(".").skip(1).collect::<Vec<&str>>().join(".").parse().unwrap();
+
+        // Only parent accounts can evaluate sub-accounts
+        require!(
+            parent_id == predecessor_account_id(),
+            format!("Only {} can evaluate {}", parent_id, sub_account_id)
+        );
+
+        // Check the parent account is registered
+        require!(
+            self.evaluations.contains_key(&parent_id),
+            format!("{} is not registered", parent_id)
+        );
     }
 
     fn random_string(&self, seed: u8) -> String {
@@ -65,13 +100,14 @@ mod tests {
     #[test]
     fn test_evaluating_sub_account() {
         let mut context = get_context(false);
-        let contract = Contract::default();
+        let mut contract = Contract::default();
 
         testing_env!(context
             .predecessor_account_id("someone.testnet".parse().unwrap())
             .build());
 
-        assert!(contract.evaluating_sub_account(&"hello_near.someone.testnet".parse().unwrap()));
+        contract.register();
+        contract.assert_valid_account(&"hello_near.someone.testnet".parse().unwrap());
     }
 
     #[test]
