@@ -74,6 +74,15 @@ mod tests {
         assert!(contract.evaluating_sub_account(&"hello_near.someone.testnet".parse().unwrap()));
     }
 
-    // TODO: Test that random_string returns random strings
-    
+    #[test]
+    fn test_random_string() {
+        let mut context = get_context(false);
+        let contract = Contract::default();
+
+        testing_env!(context
+            .predecessor_account_id("someone.testnet".parse().unwrap())
+            .build());
+        // TODO: FAILS
+        assert!(contract.random_string() != contract.random_string());
+    }
 }
