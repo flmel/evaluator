@@ -16,7 +16,7 @@ impl Contract {
             ),
         );
 
-        let random_string: String = self.random_string();
+        let random_string: String = self.random_string(1);
 
         let args = json!({ "greeting": random_string })
             .to_string()

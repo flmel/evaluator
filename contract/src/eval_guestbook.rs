@@ -27,8 +27,8 @@ impl Contract {
             ),
         );
 
-        let random_string = self.random_string();
-        let args: Vec<u8> = json!({ "text": self.random_string() })
+        let random_string = self.random_string(1);
+        let args: Vec<u8> = json!({ "text": self.random_string(2) })
             .to_string()
             .into_bytes();
         let args_call_2: Vec<u8> = json!({ "text": random_string }).to_string().into_bytes();

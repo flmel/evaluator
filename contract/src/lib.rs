@@ -40,9 +40,9 @@ impl Contract {
             .contains(predecessor_account_id().as_str())
     }
 
-    fn random_string(&self) -> String {
+    fn random_string(&self, seed: u8) -> String {
         let get_array: Vec<u8> = random_seed();
-        String::from_utf8_lossy(&get_array).to_string()
+        String::from_utf8_lossy(&get_array).to_string() + &seed.to_string()
     }
 }
 
@@ -82,7 +82,7 @@ mod tests {
         testing_env!(context
             .predecessor_account_id("someone.testnet".parse().unwrap())
             .build());
-        // TODO: FAILS
-        assert!(contract.random_string() != contract.random_string());
+
+        assert!(contract.random_string(1) != contract.random_string(2));
     }
 }
