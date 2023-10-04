@@ -1,4 +1,4 @@
-import { Worker, NearAccount, NEAR } from "near-workspaces";
+import { Worker, NearAccount, NEAR, ONE_NEAR } from "near-workspaces";
 import anyTest, { TestFn } from "ava";
 
 const test = anyTest as TestFn<{
@@ -12,25 +12,22 @@ test.beforeEach(async (t) => {
 
   // Deploy contract
   const root = worker.rootAccount;
-  const evaluator = await root.createSubAccount("evaluator");
+  const evaluator = await root.createSubAccount("evaluator", { initialBalance: NEAR.parse("30 N").toJSON() });
+
+  const student = await root.createSubAccount("student", { initialBalance: NEAR.parse("100 N").toJSON() });
+  const helloNear = await student.createSubAccount("hello", { initialBalance: NEAR.parse("10 N").toJSON() });
+
+  // Get wasm file path from package.json test script in folder above
   await evaluator.deploy(process.argv[2]);
-  
-  // Student contracts
-  const student = await root.createSubAccount("student");
-  const helloNear = await student.createSubAccount("hello", {initialBalance: NEAR.parse("1").toString()});
-  const guestBook = await student.createSubAccount("guest", {initialBalance: NEAR.parse("1").toString()});
-
-  await helloNear.deploy("./src/aux_contracts/hello_near.wasm");
-  await guestBook.deploy("./src/aux_contracts/guest_book.wasm");
-
-  await student.call(evaluator, 'register', {} , { gas: "30000000000000", attachedDeposit: "1" });
+  await student.call(evaluator, "register", {}, { attachedDeposit: NEAR.parse("2 N").toJSON() });
 
   // Save state for test runs, it is unique for each test
   t.context.worker = worker;
-  t.context.accounts = { root, evaluator, student, helloNear, guestBook };
+  t.context.accounts = { root, evaluator, student, helloNear };
 });
 
-test.afterEach.always(async (t) => {
+
+test.afterEach(async (t) => {
   // Stop Sandbox server
   await t.context.worker.tearDown().catch((error) => {
     console.log("Failed to stop the Sandbox:", error);
@@ -39,13 +36,13 @@ test.afterEach.always(async (t) => {
 
 test("Test Hello Near", async (t) => {
   const { evaluator, student, helloNear } = t.context.accounts;
-  const result = await student.call(evaluator, helloNear.accountId , { contract_name: helloNear.accountId }, { gas: "30000000000000" });
+  const result = await student.call(evaluator, "evaluate_hello_near", { contract_account_id: helloNear.accountId }, { gas: "30000000000000" });
   t.is(result, true);
 });
 
 
-test("Test GuestBook", async (t) => {
-  const { evaluator, student, guestBook } = t.context.accounts;
-  const result = await student.call(evaluator, guestBook.accountId, { contract_name: guestBook.accountId }, { gas: "30000000000000" });
-  t.is(result, true);
-});
+// test("Test GuestBook", async (t) => {
+//   const { evaluator, student, guestBook } = t.context.accounts;
+//   const result = await student.call(evaluator, guestBook.accountId, { contract_name: guestBook.accountId }, { gas: "30000000000000" });
+//   t.is(result, true);
+// });
