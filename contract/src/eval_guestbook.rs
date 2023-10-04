@@ -45,8 +45,8 @@ impl Contract {
                 Gas(15 * TGAS),
             )
             .function_call(
-                "get_messages".to_string(),
-                json!({}).to_string().into_bytes(),
+                "last_messages".to_string(),
+                json!({ "last": 2 }).to_string().into_bytes(),
                 NO_DEPOSIT,
                 Gas(5 * TGAS),
             )
@@ -62,24 +62,29 @@ impl Contract {
         &mut self,
         #[callback_result] call_result: Result<Vec<PostedMessage>, PromiseError>,
         student_id: AccountId,
-        random_string: Vec<String>
+        random_string: Vec<String>,
     ) {
         match call_result {
             Ok(messages_vec) => {
                 require!(
-                    messages_vec.len() >= 2,
-                    "There should be at least 2 messages in the guestbook"
+                    messages_vec.len() == 2,
+                    "Expected exactly 2 messages from the guestbook"
                 );
 
                 for i in 0..1 {
-                    let message = &messages_vec[messages_vec.len() - (2-i)];
                     require!(
-                        message.text == random_string[i],
-                        format!("The {} message should be {}", i, random_string[i])
+                        messages_vec[i].text == random_string[i],
+                        format!(
+                            "The {} message should be {}, not {}",
+                            i, random_string[i], &messages_vec[i].text
+                        )
                     );
                 }
-                let last_message = &messages_vec[messages_vec.len() - 1];
-                require!(last_message.premium, "The last message should be premium");
+
+                require!(
+                    messages_vec[1].premium,
+                    "The last message should be premium"
+                );
 
                 let mut evaluations = self.evaluations.get(&student_id).unwrap();
                 evaluations[1] = true;
