@@ -1,5 +1,8 @@
 use near_sdk::{
-    env, near_bindgen, require, serde_json::json, AccountId, Gas, Promise, PromiseError,
+    env::{self, log_str},
+    near_bindgen,
+    serde_json::json,
+    AccountId, Gas, Promise, PromiseError,
 };
 
 pub use crate::constants::{NO_ARGS, NO_DEPOSIT, TGAS};
@@ -37,23 +40,25 @@ impl Contract {
         #[callback_result] call_result: Result<String, PromiseError>,
         student_id: AccountId,
         random_string: String,
-    ) {
+    ) -> bool {
+        let mut passed = false;
         match call_result {
             Ok(greeting) => {
-                require!(
-                    greeting == random_string,
-                    format!(
-                        "Expected greeting to be {}, not {}",
-                        random_string, greeting
-                    )
-                );
-                let mut evaluations = self.evaluations.get(&student_id).unwrap();
-                evaluations[0] = true;
-                self.evaluations.insert(&student_id, &evaluations);
+                log_str(&format!(
+                    "Expected greeting to be {}, not {}",
+                    random_string, greeting
+                ));
+                if greeting == random_string {
+                    passed = true;
+                    let mut evaluations = self.evaluations.get(&student_id).unwrap();
+                    evaluations[0] = true;
+                    self.evaluations.insert(&student_id, &evaluations);
+                };
             }
             Err(err) => {
-                require!(false, format!("{:#?}", err));
+                log_str(&format!("{:#?}", err));
             }
         }
+        passed
     }
 }

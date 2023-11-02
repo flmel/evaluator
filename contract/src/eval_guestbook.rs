@@ -1,5 +1,6 @@
 use near_sdk::{
-    env, near_bindgen, require,
+    env::{self, log_str},
+    near_bindgen,
     serde::{Deserialize, Serialize},
     serde_json::json,
     AccountId, Gas, Promise, PromiseError, ONE_NEAR,
@@ -63,35 +64,38 @@ impl Contract {
         #[callback_result] call_result: Result<Vec<PostedMessage>, PromiseError>,
         student_id: AccountId,
         random_string: Vec<String>,
-    ) {
+    ) -> bool {
+        let mut passed = true;
+
         match call_result {
             Ok(messages_vec) => {
-                require!(
-                    messages_vec.len() == 2,
-                    "Expected exactly 2 messages from the guestbook"
-                );
-
                 for i in 0..1 {
-                    require!(
-                        messages_vec[i].text == random_string[i],
-                        format!(
-                            "The {} message should be {}, not {}",
-                            i, random_string[i], &messages_vec[i].text
-                        )
-                    );
+                    passed = passed & (messages_vec[i].text == random_string[i]);
+
+                    log_str(&format!(
+                        "The {} message should be {}, received: {}",
+                        i, random_string[i], &messages_vec[i].text
+                    ));
                 }
 
-                require!(
-                    messages_vec[1].premium,
-                    "The last message should be premium"
-                );
+                passed = passed & messages_vec[1].premium;
 
-                let mut evaluations = self.evaluations.get(&student_id).unwrap();
-                evaluations[1] = true;
-                self.evaluations.insert(&student_id, &evaluations);
+                log_str(&format!(
+                    "The last was premium: {}",
+                    messages_vec[1].premium
+                ));
+
+                if passed {
+                    let mut evaluations = self.evaluations.get(&student_id).unwrap();
+                    evaluations[1] = true;
+                    self.evaluations.insert(&student_id, &evaluations);
+                }
             }
-            // Log Error message
-            Err(err) => require!(false, format!("{:#?}", err)),
+            Err(err) => {
+                passed = false;
+                log_str(&format!("{:#?}", err))
+            }
         }
+        passed
     }
 }

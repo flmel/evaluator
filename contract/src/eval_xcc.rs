@@ -1,5 +1,7 @@
 use near_sdk::{
-    env, json_types::U128, near_bindgen, require, AccountId, Gas, Promise, PromiseError,
+    env::{self, log_str},
+    json_types::U128,
+    near_bindgen, AccountId, Gas, Promise, PromiseError,
 };
 
 use crate::{
@@ -48,6 +50,10 @@ impl Contract {
 
         match call_result {
             Ok(current_uint) => {
+                log_str(&format!(
+                    "Expected current uint to be {}, received {}",
+                    expected_uint.0, current_uint.0
+                ));
                 if current_uint.0 == expected_uint.0 {
                     let mut evaluations = self.evaluations.get(&student_id).unwrap();
                     evaluations[2] = true;
@@ -55,7 +61,7 @@ impl Contract {
                     passed = true;
                 };
             }
-            _ => { }
+            _ => {}
         }
 
         passed
