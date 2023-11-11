@@ -45,23 +45,23 @@ test.afterEach(async (t) => {
   });
 });
 
-// test("Test Hello Near", async (t) => {
-//   const { evaluator, student, helloNear } = t.context.accounts;
-//   await student.call(evaluator, "evaluate_hello_near", { contract_account_id: helloNear.accountId }, { gas: "300000000000000" });
-//   t.is(true, true);
-// });
+test("Test Hello Near", async (t) => {
+  const { evaluator, student, helloNear } = t.context.accounts;
+  await student.call(evaluator, "evaluate_hello_near", { contract_account_id: helloNear.accountId }, { gas: "300000000000000" });
+  t.is(true, true);
+});
 
-// test("Test GuestBook", async (t) => {
-//   const { evaluator, student, guestBook } = t.context.accounts;
-//   await student.call(evaluator, "evaluate_guestbook", { contract_account_id: guestBook.accountId }, { gas: "300000000000000" });
-//   t.is(true, true);
-// });
+test("Test GuestBook", async (t) => {
+  const { evaluator, student, guestBook } = t.context.accounts;
+  await student.call(evaluator, "evaluate_guestbook", { contract_account_id: guestBook.accountId }, { gas: "300000000000000" });
+  t.is(true, true);
+});
 
-// test("Test XCC", async (t) => {
-//   const { evaluator, student, xcc } = t.context.accounts;
-//   await student.call(evaluator, "evaluate_xcc", { contract_account_id: xcc.accountId }, { gas: "300000000000000" });
-//   t.is(true, true);
-// });
+test("Test XCC", async (t) => {
+  const { evaluator, student, xcc } = t.context.accounts;
+  await student.call(evaluator, "evaluate_xcc", { contract_account_id: xcc.accountId }, { gas: "300000000000000" });
+  t.is(true, true);
+});
 
 test("Test Complex Input", async (t) => {
   const { evaluator, student, ci } = t.context.accounts;
@@ -70,12 +70,12 @@ test("Test Complex Input", async (t) => {
   t.is(result, true);
 });
 
-// test("Passed all tests", async (t) => {
-//   const { evaluator, student, helloNear, guestBook, xcc, ci } = t.context.accounts;
-//   await student.call(evaluator, "evaluate_hello_near", { contract_account_id: helloNear.accountId }, { gas: "300000000000000" });
-//   await student.call(evaluator, "evaluate_guestbook", { contract_account_id: guestBook.accountId }, { gas: "300000000000000" });
-//   await student.call(evaluator, "evaluate_xcc", { contract_account_id: xcc.accountId }, { gas: "300000000000000" });
-//   await student.call(evaluator, "evaluate_complex_input", { contract_account_id: ci.accountId }, { gas: "300000000000000" });
-//   const passed = await evaluator.view('passed_all_exams', { account_id: student.accountId })
-//   t.is(passed, true);
-// });
+test("Passed all tests", async (t) => {
+  const { evaluator, student, helloNear, guestBook, xcc, ci } = t.context.accounts;
+  await student.call(evaluator, "evaluate_hello_near", { contract_account_id: helloNear.accountId }, { gas: "300000000000000" });
+  await student.call(evaluator, "evaluate_guestbook", { contract_account_id: guestBook.accountId }, { gas: "300000000000000" });
+  await student.call(evaluator, "evaluate_xcc", { contract_account_id: xcc.accountId }, { gas: "300000000000000" });
+  await student.call(evaluator, "evaluate_complex_input", { contract_account_id: ci.accountId }, { gas: "300000000000000" });
+  const passed = await evaluator.view('passed_all_exams', { account_id: student.accountId })
+  t.is(passed, true);
+});
