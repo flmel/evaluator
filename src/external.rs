@@ -5,6 +5,8 @@ use near_sdk::{
     AccountId,
 };
 
+use near_contract_standards::non_fungible_token::{metadata::TokenMetadata, TokenId};
+
 #[derive(Serialize, Deserialize, BorshDeserialize, BorshSerialize)]
 #[serde(crate = "near_sdk::serde")]
 pub struct PostedMessage {
@@ -24,4 +26,9 @@ trait HelloNear {
 trait GuestBook {
     fn add_message(&mut self, text: String);
     fn get_messages(&self) -> Vec<PostedMessage>;
+}
+
+#[ext_contract(certificate_issuer)]
+trait CertificateIssuer {
+    fn nft_mint(&mut self, token_id: TokenId, token_owner_id: AccountId, metadata: TokenMetadata);
 }
