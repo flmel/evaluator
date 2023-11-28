@@ -67,34 +67,36 @@ impl Contract {
     }
 
     pub fn claim_certificate(&mut self) {
-        assert_one_yocto();
         let student_account_id = env::predecessor_account_id();
 
-        if self.passed_all_exams(student_account_id.clone()) {
-            certificate_issuer::ext(CERT_CONTRACT_ACC.parse().unwrap())
-                .with_static_gas(Gas(20 * TGAS))
-                .nft_mint(
-                    encode(student_account_id.to_string()),
-                    student_account_id,
-                    TokenMetadata {
-                        title: Some("Certificate".to_string()),
-                        description: Some(
-                            "Certificate of completion for the NEAR Certified Developer Program"
-                                .to_string(),
-                        ),
-                        media: None,
-                        media_hash: None,
-                        copies: None,
-                        issued_at: None,
-                        expires_at: None,
-                        starts_at: None,
-                        updated_at: None,
-                        extra: None,
-                        reference: None,
-                        reference_hash: None,
-                    },
-                );
-        }
+        require!(
+            self.passed_all_exams(student_account_id.clone()),
+            "You have not passed all exams yet"
+        );
+
+        certificate_issuer::ext(CERT_CONTRACT_ACC.parse().unwrap())
+            .with_static_gas(Gas(20 * TGAS))
+            .nft_mint(
+                encode(student_account_id.to_string()),
+                student_account_id,
+                TokenMetadata {
+                    title: Some("Certificate".to_string()),
+                    description: Some(
+                        "Certificate of completion for the NEAR Certified Developer Program"
+                            .to_string(),
+                    ),
+                    media: None,
+                    media_hash: None,
+                    copies: None,
+                    issued_at: None,
+                    expires_at: None,
+                    starts_at: None,
+                    updated_at: None,
+                    extra: None,
+                    reference: None,
+                    reference_hash: None,
+                },
+            );
     }
 
     fn assert_valid_account(&self, sub_account_id: &AccountId) {
