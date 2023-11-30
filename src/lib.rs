@@ -1,12 +1,10 @@
 pub use crate::constants::{BASIC_EVAL_NUMBER, CERT_CONTRACT_ACC, REGISTRATION_COST, TGAS};
 use near_contract_standards::non_fungible_token::metadata::TokenMetadata;
 use near_sdk::{
-    assert_one_yocto,
-    base64::encode,
     borsh::{self, BorshDeserialize, BorshSerialize},
     collections::LookupMap,
     env::{self, predecessor_account_id, random_seed},
-    near_bindgen, require, AccountId, Gas,
+    near_bindgen, require, AccountId, Gas, Promise, ONE_NEAR,
 };
 
 pub mod external;
@@ -66,7 +64,7 @@ impl Contract {
         evaluations.iter().all(|&x| x)
     }
 
-    pub fn claim_certificate(&mut self) {
+    pub fn claim_certificate(&mut self) -> Promise {
         let student_account_id = env::predecessor_account_id();
 
         require!(
@@ -76,8 +74,9 @@ impl Contract {
 
         certificate_issuer::ext(CERT_CONTRACT_ACC.parse().unwrap())
             .with_static_gas(Gas(20 * TGAS))
+            .with_attached_deposit(ONE_NEAR)
             .nft_mint(
-                encode(student_account_id.to_string()),
+                student_account_id.to_string(),
                 student_account_id,
                 TokenMetadata {
                     title: Some("Certificate".to_string()),
@@ -96,7 +95,7 @@ impl Contract {
                     reference: None,
                     reference_hash: None,
                 },
-            );
+            )
     }
 
     fn assert_valid_account(&self, sub_account_id: &AccountId) {

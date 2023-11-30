@@ -30,5 +30,10 @@ trait GuestBook {
 
 #[ext_contract(certificate_issuer)]
 trait CertificateIssuer {
-    fn nft_mint(&mut self, token_id: TokenId, token_owner_id: AccountId, metadata: TokenMetadata);
+    fn nft_mint(
+        &mut self,
+        token_id: TokenId,
+        token_owner_id: AccountId,
+        token_metadata: TokenMetadata,
+    );
 }
