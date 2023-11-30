@@ -1,11 +1,11 @@
+pub use crate::constants::{BASIC_EVAL_NUMBER, CERT_CONTRACT_ACC, REGISTRATION_COST, TGAS};
+use near_contract_standards::non_fungible_token::metadata::TokenMetadata;
 use near_sdk::{
     borsh::{self, BorshDeserialize, BorshSerialize},
     collections::LookupMap,
     env::{self, predecessor_account_id, random_seed},
-    near_bindgen, require, AccountId,
+    near_bindgen, require, AccountId, Gas, Promise, ONE_NEAR,
 };
-
-pub use crate::constants::{BASIC_EVAL_NUMBER, REGISTRATION_COST};
 
 pub mod external;
 pub use crate::external::*;
@@ -62,6 +62,40 @@ impl Contract {
     pub fn passed_all_exams(&self, account_id: AccountId) -> bool {
         let evaluations = self.evaluations.get(&account_id).unwrap();
         evaluations.iter().all(|&x| x)
+    }
+
+    pub fn claim_certificate(&mut self) -> Promise {
+        let student_account_id = env::predecessor_account_id();
+
+        require!(
+            self.passed_all_exams(student_account_id.clone()),
+            "You have not passed all exams yet"
+        );
+
+        certificate_issuer::ext(CERT_CONTRACT_ACC.parse().unwrap())
+            .with_static_gas(Gas(20 * TGAS))
+            .with_attached_deposit(ONE_NEAR)
+            .nft_mint(
+                student_account_id.to_string(),
+                student_account_id,
+                TokenMetadata {
+                    title: Some("Certificate".to_string()),
+                    description: Some(
+                        "Certificate of completion for the NEAR Certified Developer Program"
+                            .to_string(),
+                    ),
+                    media: None,
+                    media_hash: None,
+                    copies: None,
+                    issued_at: None,
+                    expires_at: None,
+                    starts_at: None,
+                    updated_at: None,
+                    extra: None,
+                    reference: None,
+                    reference_hash: None,
+                },
+            )
     }
 
     fn assert_valid_account(&self, sub_account_id: &AccountId) {
