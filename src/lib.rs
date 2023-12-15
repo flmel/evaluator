@@ -125,8 +125,13 @@ impl Contract {
             .unwrap()
     }
 
-    fn check_account_registered(&self, account_id: &AccountId) -> bool {
+    pub fn check_account_registered(&self, account_id: &AccountId) -> bool {
         self.evaluations.contains_key(&account_id)
+    }
+
+    pub fn get_progress(&self, account_id: AccountId) -> Vec<bool> {
+        let evaluations = self.evaluations.get(&account_id).unwrap();
+        evaluations.clone()
     }
 
     fn random_string(&self, seed: u8) -> String {
